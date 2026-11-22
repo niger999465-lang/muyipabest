@@ -91,7 +91,7 @@ struct ContentView: View {
         Group {
             if licenseManager.isActive {
                 TabView(selection: $selectedTab) {
-                    HomeView(patchStore: patchStore)
+                    HomeView(patchStore: patchStore, licenseManager: licenseManager)
                         .tabItem { Label("Trang chủ", systemImage: "house.fill") }
                         .tag(0)
                     
@@ -132,6 +132,7 @@ struct ContentView: View {
 struct HomeView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject var patchStore: PatchProjectStore
+    @ObservedObject var licenseManager: LicenseManager
     @State private var showCleaner = false
 
     var body: some View {
@@ -170,13 +171,13 @@ struct HomeView: View {
     private var brandHeader: some View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("MUYYNGUYEN")
-                    .font(.system(size: 25, weight: .black, design: .rounded))
+                Text("MUY")
+                    .font(.system(size: 26, weight: .black, design: .rounded))
                     .tracking(3)
                     .foregroundStyle(.white)
-                Text("PATCH CONTROL CENTER")
+                Text("NGUYEN MINH HUY • CONTROL CENTER")
                     .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .tracking(1.7)
+                    .tracking(1.5)
                     .foregroundStyle(.white.opacity(0.8))
             }
             Spacer()
@@ -218,12 +219,12 @@ struct HomeView: View {
     private var footerStatus: some View {
         HStack(spacing: 10) {
             Circle().fill(.green).frame(width: 9, height: 9).shadow(color: .green, radius: 6)
-            Text("HỆ THỐNG ĐÃ SẴN SÀNG")
+            Text("MUY SYSTEM SẴN SÀNG")
                 .font(.system(size: 10, weight: .black, design: .rounded))
                 .tracking(1.2)
                 .foregroundStyle(.white.opacity(0.72))
             Spacer()
-            Text("Muyy • PRONTO")
+            Text(licenseManager.isAdmin ? "Muy • Admin" : "Muy • 1-Day Key")
                 .font(.system(size: 9, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.8))
         }
@@ -235,15 +236,15 @@ struct HomeView: View {
 
     private var developerCredits: some View {
         VStack(spacing: 10) {
-            Text("Developed by Muy Nguyen")
+            Text("Developed by Nguyen Minh Huy")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.72))
                 .multilineTextAlignment(.center)
-            Text("Zalo Nguyen Minh Huy")
+            Text("Muy • Zalo Nguyen Minh Huy")
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.85))
             HStack(spacing: 10) {
-                channelButton(title: "Zalo", url: "https://zalo.me/0569928928")
+                channelButton(title: "Zalo Nguyen Minh Huy", url: "https://zalo.me/0569928928")
             }
         }
         .frame(maxWidth: .infinity)
@@ -319,7 +320,7 @@ struct FeaturesView: View {
     @ObservedObject var patchStore: PatchProjectStore
     @EnvironmentObject private var appState: AppState
     @State private var patchOperationBusy = false
-    @State private var patchMessage = "READY -- SELECT A PATCH"
+    @State private var patchMessage = "MUY READY -- SELECT A PATCH"
     
     @State private var currentScreen = 0 
 
@@ -380,7 +381,7 @@ struct FeaturesView: View {
         }
         .onChange(of: scenePhase) { phase in
             guard phase == .active, !patchOperationBusy else { return }
-            patchMessage = "READY -- SELECT A PATCH"
+            patchMessage = "MUY READY -- SELECT A PATCH"
         }
     }
 
@@ -391,7 +392,7 @@ struct FeaturesView: View {
                     Image(systemName: "flame.fill").font(.title2).foregroundStyle(.white)
                     VStack(alignment: .leading) {
                         Text("Free Fire VN").font(.headline).foregroundStyle(.white)
-                        Text("com.garena.ffvn").font(.caption).foregroundStyle(.white.opacity(0.7))
+                        Text("com.garena.ffvn • Muy").font(.caption).foregroundStyle(.white.opacity(0.7))
                     }
                     Spacer()
                     Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.5))
@@ -509,6 +510,8 @@ struct FeaturesView: View {
 struct SettingsView: View {
     @ObservedObject var licenseManager: LicenseManager
     @ObservedObject private var audioManager = AudioManager.shared
+    @State private var showAdminLogin = false
+    @State private var showAdminPanel = false
     
     var body: some View {
         ZStack {
@@ -535,8 +538,10 @@ struct SettingsView: View {
                             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
                         
                         VStack(alignment: .leading) {
-                            Text("MUYY IPA").font(.title3.bold()).foregroundStyle(.white)
-                            Text("Phiên bản 2.0").font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                            Text("MUY • NGUYEN MINH HUY").font(.headline.bold()).foregroundStyle(.white)
+                            Text(licenseManager.isAdmin ? "Phiên bản 2.0 • ADMIN" : "Phiên bản 2.0")
+                                .font(.subheadline)
+                                .foregroundStyle(licenseManager.isAdmin ? .yellow : .white.opacity(0.7))
                         }
                         Spacer()
                     }
@@ -590,17 +595,18 @@ struct SettingsView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("BẢN QUYỀN / KEY").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        Text("BẢN QUYỀN & ADMIN • NGUYEN MINH HUY").font(.caption).foregroundStyle(.white.opacity(0.5))
                         VStack(spacing: 12) {
                             if let savedKey = licenseManager.rememberedKey(), !savedKey.isEmpty {
                                 HStack {
-                                    Text("Key hiện tại").foregroundStyle(.white)
+                                    Text("Trạng thái").foregroundStyle(.white)
                                     Spacer()
                                     Text(savedKey)
                                         .font(.system(.footnote, design: .monospaced).bold())
-                                        .foregroundStyle(.white.opacity(0.8))
+                                        .foregroundStyle(licenseManager.isAdmin ? .yellow : .white.opacity(0.85))
                                 }
                             }
+
                             if let exp = licenseManager.expirationDate {
                                 HStack {
                                     Text("Hết hạn").foregroundStyle(.white)
@@ -609,7 +615,65 @@ struct SettingsView: View {
                                         .font(.footnote)
                                         .foregroundStyle(.white.opacity(0.75))
                                 }
+                            } else if licenseManager.isAdmin {
+                                HStack {
+                                    Text("Hạn sử dụng").foregroundStyle(.white)
+                                    Spacer()
+                                    Text("Admin • Nguyen Minh Huy")
+                                        .font(.footnote.bold())
+                                        .foregroundStyle(.yellow)
+                                }
                             }
+
+                            if licenseManager.isAdmin {
+                                Button {
+                                    showAdminPanel = true
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "crown.fill")
+                                        Text("Mở Bảng Quản Trị Admin (AutoGen Key)")
+                                    }
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.black)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.yellow, in: RoundedRectangle(cornerRadius: 12))
+                                }
+                                .buttonStyle(.plain)
+
+                                Button {
+                                    licenseManager.logoutAdmin()
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "person.crop.circle.badge.xmark")
+                                        Text("Đăng xuất Admin")
+                                    }
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.orange)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.orange.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.orange.opacity(0.35), lineWidth: 0.5))
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                Button {
+                                    showAdminLogin = true
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "person.badge.key.fill")
+                                        Text("Đăng nhập Admin")
+                                    }
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.yellow)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(Color.yellow.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow.opacity(0.35), lineWidth: 0.5))
+                                }
+                                .buttonStyle(.plain)
+                            }
+
                             Button {
                                 licenseManager.deactivate()
                             } label: {
@@ -637,6 +701,104 @@ struct SettingsView: View {
                 .padding(.bottom, 28)
             }
         }
+        .sheet(isPresented: $showAdminLogin) {
+            AdminLoginSheet(manager: licenseManager)
+        }
+        .sheet(isPresented: $showAdminPanel) {
+            AdminPanelView(manager: licenseManager)
+        }
+    }
+}
+
+// MARK: - BẢNG QUẢN TRỊ ADMIN
+struct AdminPanelView: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var manager: LicenseManager
+    @State private var copiedCode: String?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Muy • AutoGen Key nhanh") {
+                    HStack(spacing: 10) {
+                        genButton(title: "+ Key 1 Ngày", hours: 24)
+                        genButton(title: "+ Key 7 Ngày", hours: 24 * 7)
+                    }
+                    HStack(spacing: 10) {
+                        genButton(title: "+ Key 30 Ngày", hours: 24 * 30)
+                        genButton(title: "+ Vĩnh viễn", hours: 0)
+                    }
+                    if let copiedCode {
+                        Text("Đã tạo & copy: \(copiedCode)")
+                            .font(.caption.monospaced())
+                            .foregroundStyle(.green)
+                    }
+                }
+
+                Section("Key có sẵn 1 ngày (\(LicenseManager.defaultPresetKey))") {
+                    Button("Reset lượt dùng key \"\(LicenseManager.defaultPresetKey)\"") {
+                        manager.resetPresetKeyUsage()
+                        copiedCode = "Đã reset key \(LicenseManager.defaultPresetKey)"
+                    }
+                    .foregroundStyle(.orange)
+                }
+
+                Section("Danh sách Key đã AutoGen (\(manager.generatedKeys.count))") {
+                    if manager.generatedKeys.isEmpty {
+                        Text("Chưa có key nào được tạo.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(manager.generatedKeys) { item in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.code)
+                                        .font(.system(.body, design: .monospaced).bold())
+                                    Text("Thời hạn: \(item.durationLabel) • \(item.isExpired ? "Hết hạn" : (item.activatedAt == nil ? "Chưa dùng" : "Đang dùng"))")
+                                        .font(.caption)
+                                        .foregroundStyle(item.isExpired ? .red : .secondary)
+                                }
+                                Spacer()
+                                Button {
+                                    UIPasteboard.general.string = item.code
+                                    copiedCode = item.code
+                                } label: {
+                                    Image(systemName: "doc.on.doc")
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+                        .onDelete { indexSet in
+                            for idx in indexSet {
+                                manager.deleteGeneratedKey(manager.generatedKeys[idx])
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Nguyen Minh Huy • Admin")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Xong") { dismiss() }
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func genButton(title: String, hours: Int) -> some View {
+        Button {
+            let item = manager.autoGenerateKey(durationHours: hours)
+            UIPasteboard.general.string = item.code
+            copiedCode = item.code
+        } label: {
+            Text(title)
+                .font(.subheadline.bold())
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.accentColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -725,7 +887,7 @@ struct PatchUnlockPrompt: View {
                             .foregroundStyle(.red)
                     }
                 } footer: {
-                    Text("Enter the password once to unlock this TienDat package on this device.")
+                    Text("Enter the password once to unlock this Muy package on this device.")
                 }
             }
             .navigationTitle("Unlock package")
@@ -806,7 +968,7 @@ struct SetupView: View {
                     Image(systemName: "iphone.gen3").foregroundStyle(.white)
                     VStack(alignment: .leading) {
                         Text("Pair trực tiếp trên máy").font(.headline)
-                        Text(isPaired ? "Thiết bị: 3105 (Đã pair)" : "Cần hoàn tất pairing để tiếp tục")
+                        Text(isPaired ? "Thiết bị: Muy (Đã pair)" : "Cần hoàn tất pairing để tiếp tục")
                             .font(.caption).foregroundStyle(isPaired ? .green : .gray)
                     }
                     Spacer()
@@ -886,7 +1048,6 @@ struct SetupView: View {
             }
             .padding(.horizontal).disabled(isChecking)
             
-            // Chỉ cho bỏ qua trên các phiên bản thấp hơn iOS 26.6.1.
             if isBelowIOS2661 {
                 Button(action: { hasCompletedSetup = true }) {
                     Text("Bỏ qua (iOS dưới 26.6.1)")
@@ -896,8 +1057,6 @@ struct SetupView: View {
         }
     }
     
-    // iOS does not expose a public API for checking another app's VPN tunnel.
-    // Ask the user to confirm LocalDevVPN is enabled instead of rejecting a valid VPN.
     private func checkVPNConnection() {
         let alert = UIAlertController(
             title: "Xác nhận LocalDevVPN",
@@ -925,8 +1084,6 @@ struct SetupView: View {
         return v.patchVersion < 1
     }
 
-    // Pairing must be performed by an Apple-supported pairing tool.
-    // This confirmation records the user's acknowledgement; it does not create a pairing.
     private func confirmPairingCompleted() {
         let alert = UIAlertController(
             title: "Xác nhận Pairing",
