@@ -631,7 +631,7 @@ struct SettingsView: View {
                                 } label: {
                                     HStack {
                                         Image(systemName: "crown.fill")
-                                        Text("Mở Bảng Quản Trị Admin (AutoGen Key)")
+                                        Text("Mở Bảng Quản Trị Admin")
                                     }
                                     .font(.system(size: 14, weight: .bold, design: .rounded))
                                     .foregroundStyle(.black)
@@ -705,7 +705,7 @@ struct SettingsView: View {
             AdminLoginSheet(manager: licenseManager)
         }
         .sheet(isPresented: $showAdminPanel) {
-            AdminPanelView(manager: licenseManager)
+            AdminPanelView(licenseStore: licenseManager)
         }
     }
 }
@@ -713,66 +713,32 @@ struct SettingsView: View {
 // MARK: - BẢNG QUẢN TRỊ ADMIN
 struct AdminPanelView: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var manager: LicenseManager
-    @State private var copiedCode: String?
+    @ObservedObject var licenseStore: LicenseManager
+    @State private var statusNote = "Muy • Admin Ready"
 
     var body: some View {
         NavigationStack {
             List {
-                Section("Muy • AutoGen Key nhanh") {
-                    HStack(spacing: 10) {
-                        genButton(title: "+ Key 1 Ngày", hours: 24)
-                        genButton(title: "+ Key 7 Ngày", hours: 24 * 7)
+                Section("Muy • Key mặc định 1 ngày (\(LicenseManager.defaultPresetKey))") {
+                    Button {
+                        UserDefaults.standard.removeObject(forKey: "muy_used_keys_v1")
+                        statusNote = "Đã reset key \(LicenseManager.defaultPresetKey)"
+                    } label: {
+                        Text("Reset lượt dùng key mặc định")
+                            .foregroundStyle(.orange)
                     }
-                    HStack(spacing: 10) {
-                        genButton(title: "+ Key 30 Ngày", hours: 24 * 30)
-                        genButton(title: "+ Vĩnh viễn", hours: 0)
-                    }
-                    if let copiedCode {
-                        Text("Đã tạo & copy: \(copiedCode)")
-                            .font(.caption.monospaced())
-                            .foregroundStyle(.green)
-                    }
+
+                    Text(statusNote)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.green)
                 }
 
-                Section("Key có sẵn 1 ngày (\(LicenseManager.defaultPresetKey))") {
-                    Button("Reset lượt dùng key \"\(LicenseManager.defaultPresetKey)\"") {
-                        manager.resetPresetKeyUsage()
-                        copiedCode = "Đã reset key \(LicenseManager.defaultPresetKey)"
-                    }
-                    .foregroundStyle(.orange)
-                }
-
-                Section("Danh sách Key đã AutoGen (\(manager.generatedKeys.count))") {
-                    if manager.generatedKeys.isEmpty {
-                        Text("Chưa có key nào được tạo.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(manager.generatedKeys) { item in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(item.code)
-                                        .font(.system(.body, design: .monospaced).bold())
-                                    Text("Thời hạn: \(item.durationLabel) • \(item.isExpired ? "Hết hạn" : (item.activatedAt == nil ? "Chưa dùng" : "Đang dùng"))")
-                                        .font(.caption)
-                                        .foregroundStyle(item.isExpired ? .red : .secondary)
-                                }
-                                Spacer()
-                                Button {
-                                    UIPasteboard.general.string = item.code
-                                    copiedCode = item.code
-                                } label: {
-                                    Image(systemName: "doc.on.doc")
-                                }
-                                .buttonStyle(.borderless)
-                            }
-                        }
-                        .onDelete { indexSet in
-                            for idx in indexSet {
-                                manager.deleteGeneratedKey(manager.generatedKeys[idx])
-                            }
-                        }
-                    }
+                Section("Quản lý key qua GitHub") {
+                    Text("Repo: niger999465-lang/mhkey")
+                        .font(.caption.monospaced())
+                    Text("Chỉnh sửa file keys.json trên GitHub để thêm, xóa hoặc đổi trạng thái key bất cứ lúc nào.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
             .navigationTitle("Nguyen Minh Huy • Admin")
@@ -784,21 +750,6 @@ struct AdminPanelView: View {
             }
         }
         .preferredColorScheme(.dark)
-    }
-
-    private func genButton(title: String, hours: Int) -> some View {
-        Button {
-            let item = manager.autoGenerateKey(durationHours: hours)
-            UIPasteboard.general.string = item.code
-            copiedCode = item.code
-        } label: {
-            Text(title)
-                .font(.subheadline.bold())
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(Color.accentColor.opacity(0.2), in: RoundedRectangle(cornerRadius: 10))
-        }
-        .buttonStyle(.plain)
     }
 }
 
