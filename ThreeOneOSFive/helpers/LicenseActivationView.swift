@@ -5,8 +5,6 @@ struct LicenseActivationView: View {
     @ObservedObject var manager: LicenseManager
     @State private var key = ""
     @State private var showAdminLogin = false
-    @State private var adminPassInput = ""
-    @State private var adminError: String?
     @FocusState private var keyFocused: Bool
 
     var body: some View {
@@ -23,19 +21,19 @@ struct LicenseActivationView: View {
                         VStack(spacing: 0) {
                             Spacer(minLength: 36)
 
-                            Text("TIENDAT")
-                                .font(.system(size: 30, weight: .black, design: .rounded))
-                                .tracking(1.4)
+                            Text("MUY")
+                                .font(.system(size: 32, weight: .black, design: .rounded))
+                                .tracking(2)
                                 .foregroundStyle(.white)
 
-                            Text("Version: 1.1.1")
+                            Text("Nguyen Minh Huy • Version 1.1.1")
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.55))
+                                .foregroundStyle(.white.opacity(0.62))
                                 .padding(.top, 5)
 
-                            Text("Package: TienDat • 1-Day License")
+                            Text("Package: Muy • 1-Day License")
                                 .font(.system(size: 12, weight: .bold, design: .rounded))
-                                .foregroundStyle(AppTheme.secondaryAccent.opacity(0.9))
+                                .foregroundStyle(AppTheme.secondaryAccent.opacity(0.95))
                                 .padding(.top, 8)
 
                             VStack(spacing: 15) {
@@ -43,18 +41,18 @@ struct LicenseActivationView: View {
                                     Image(systemName: manager.isBusy ? "arrow.triangle.2.circlepath" : "key.fill")
                                         .foregroundStyle(AppTheme.secondaryAccent)
                                         .font(.system(size: 16, weight: .bold))
-                                    Text(manager.isBusy ? "Verifying..." : "Key required (1 Day)")
+                                    Text(manager.isBusy ? "Đang xác thực..." : "Yêu cầu Key (1 Ngày)")
                                         .font(.system(size: 16, weight: .black, design: .rounded))
                                         .foregroundStyle(.white)
                                     Spacer()
                                 }
 
-                                Text("Nhập key có sẵn (hạn 1 ngày) hoặc bấm AutoGen để tạo key mới.")
+                                Text("Nhập key 1 ngày của Muy hoặc bấm AutoGen để tạo key mới.")
                                     .font(.system(size: 13, weight: .medium, design: .rounded))
                                     .foregroundStyle(.white.opacity(0.68))
                                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                                TextField("License key (VD: TienDat)", text: $key)
+                                TextField("Nhập key (VD: MUY-1DAY)", text: $key)
                                     .focused($keyFocused)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
@@ -68,7 +66,6 @@ struct LicenseActivationView: View {
                                     .overlay(RoundedRectangle(cornerRadius: 17, style: .continuous).stroke(AppTheme.accent.opacity(0.48), lineWidth: 1))
                                     .id("license-field")
 
-                                // Hàng nút AutoGen Key 1 Day & Key có sẵn
                                 HStack(spacing: 10) {
                                     Button {
                                         let generated = manager.autoGenerateKey(durationHours: 24)
@@ -92,7 +89,7 @@ struct LicenseActivationView: View {
                                     } label: {
                                         HStack(spacing: 6) {
                                             Image(systemName: "key.viewfinder")
-                                            Text("Key mặc định")
+                                            Text("Key có sẵn")
                                         }
                                         .font(.system(size: 12, weight: .bold, design: .rounded))
                                         .foregroundStyle(.white)
@@ -103,7 +100,7 @@ struct LicenseActivationView: View {
                                     .buttonStyle(.plain)
                                 }
 
-                                Toggle("Remember key on this device", isOn: $manager.rememberKey)
+                                Toggle("Ghi nhớ key trên thiết bị này", isOn: $manager.rememberKey)
                                     .font(.system(size: 12, weight: .bold, design: .rounded))
                                     .foregroundStyle(.white.opacity(0.72))
                                     .tint(AppTheme.accent)
@@ -111,7 +108,7 @@ struct LicenseActivationView: View {
                                 Button(action: activate) {
                                     HStack(spacing: 9) {
                                         Image(systemName: manager.isBusy ? "hourglass" : "checkmark.shield.fill")
-                                        Text(manager.isBusy ? "VERIFYING…" : "VERIFY AND CONTINUE")
+                                        Text(manager.isBusy ? "ĐANG KIỂM TRA…" : "XÁC NHẬN & TIẾP TỤC")
                                     }
                                     .font(.system(size: 14, weight: .black, design: .rounded))
                                     .foregroundStyle(.white)
@@ -135,8 +132,8 @@ struct LicenseActivationView: View {
                                 }
 
                                 HStack(spacing: 16) {
-                                    Button("Contact Admin (Zalo)") {
-                                        if let url = URL(string: "https://zalo.me/0986321175") {
+                                    Button("Liên hệ Nguyen Minh Huy") {
+                                        if let url = URL(string: "https://zalo.me/0569928928") {
                                             UIApplication.shared.open(url)
                                         }
                                     }
@@ -148,8 +145,6 @@ struct LicenseActivationView: View {
                                         .foregroundStyle(.white.opacity(0.35))
 
                                     Button {
-                                        adminPassInput = ""
-                                        adminError = nil
                                         showAdminLogin = true
                                     } label: {
                                         Label("Admin Login", systemImage: "person.badge.key.fill")
@@ -193,7 +188,6 @@ struct LicenseActivationView: View {
     }
 }
 
-// MARK: - SHEET ĐĂNG NHẬP ADMIN
 struct AdminLoginSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var manager: LicenseManager
@@ -203,7 +197,7 @@ struct AdminLoginSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Đăng nhập quản trị viên") {
+                Section("Nguyen Minh Huy • Admin Login") {
                     SecureField("Mật khẩu Admin", text: $password)
                         .submitLabel(.done)
                         .onSubmit(submitAdmin)
@@ -222,7 +216,7 @@ struct AdminLoginSheet: View {
                     .font(.headline)
                     .disabled(password.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 } footer: {
-                    Text("Sau khi đăng nhập Admin, bạn có thể vào thẳng app và mở Bảng Admin trong tab Cài đặt để AutoGen / quản lý key.")
+                    Text("Đăng nhập thành công sẽ mở thẳng vào hệ thống của Muy và bật Bảng Quản Trị Admin trong Cài đặt.")
                 }
             }
             .navigationTitle("Admin Login")
