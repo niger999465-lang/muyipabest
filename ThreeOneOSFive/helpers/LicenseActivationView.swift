@@ -19,7 +19,6 @@ struct LicenseActivationView: View {
                         VStack(spacing: 0) {
                             Spacer(minLength: 42)
 
-                            // Đã đổi tên thành TIENDAT
                             Text("TIENDAT")
                                 .font(.system(size: 30, weight: .black, design: .rounded))
                                 .tracking(1.4)
@@ -85,10 +84,16 @@ struct LicenseActivationView: View {
                                 .disabled(key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || manager.isBusy)
                                 .opacity(key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.48 : 1)
 
+                                if let exp = manager.expirationDate {
+                                    Text("Expires: \(exp.formatted(date: .abbreviated, time: .shortened))")
+                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .foregroundStyle(.white.opacity(0.72))
+                                }
+
                                 if let message = manager.message {
                                     Text(message)
                                         .font(.system(size: 12, weight: .bold, design: .rounded))
-                                        .foregroundStyle(.red.opacity(0.95))
+                                        .foregroundStyle(manager.isActive ? .green.opacity(0.95) : .red.opacity(0.95))
                                         .multilineTextAlignment(.center)
                                         .frame(maxWidth: .infinity)
                                         .padding(.horizontal, 14)
@@ -96,7 +101,6 @@ struct LicenseActivationView: View {
                                         .background(Color.gray.opacity(0.20), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 }
 
-                                // Nút liên hệ (Đổi thành Zalo)
                                 Button("Contact Admin (Zalo)") {
                                     if let url = URL(string: "https://zalo.me/0986321175") {
                                         UIApplication.shared.open(url)
