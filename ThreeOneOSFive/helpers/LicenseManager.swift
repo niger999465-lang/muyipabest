@@ -12,7 +12,7 @@ private struct GitHubKeyRule: Decodable {
 @MainActor
 final class LicenseManager: ObservableObject {
     // Link Raw tới file keys.json trên GitHub của bạn
-    static let githubKeysRawURL = "https://raw.githubusercontent.com/niger999465-lang/muy-keys/main/keys.json"
+    static let githubKeysRawURL = "https://raw.githubusercontent.com/niger999465-lang/mhkey/main/keys.json"
     // Nếu repo để Private, điền GitHub Fine-grained Token (chỉ quyền Read Contents) vào đây; nếu Public thì để trống ""
     static let githubReadToken = ""
 
