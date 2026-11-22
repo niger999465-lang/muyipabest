@@ -82,33 +82,48 @@ func loadImageFromBundle(named name: String) -> Image {
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var appState: AppState
+    @StateObject private var licenseManager = LicenseManager()
     @StateObject private var patchStore = PatchProjectStore()
     
     @State private var selectedTab = 0
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            HomeView(patchStore: patchStore)
-                .tabItem { Label("Trang chủ", systemImage: "house.fill") }
-                .tag(0)
-            
-            FeaturesView(patchStore: patchStore)
-                .tabItem { Label("Chức năng", systemImage: "cube.fill") }
-                .tag(1)
-            
-            SettingsView()
-                .tabItem { Label("Cài đặt", systemImage: "gearshape.fill") }
-                .tag(2)
+        Group {
+            if licenseManager.isActive {
+                TabView(selection: $selectedTab) {
+                    HomeView(patchStore: patchStore)
+                        .tabItem { Label("Trang chủ", systemImage: "house.fill") }
+                        .tag(0)
+                    
+                    FeaturesView(patchStore: patchStore)
+                        .tabItem { Label("Chức năng", systemImage: "cube.fill") }
+                        .tag(1)
+                    
+                    SettingsView(licenseManager: licenseManager)
+                        .tabItem { Label("Cài đặt", systemImage: "gearshape.fill") }
+                        .tag(2)
+                }
+                .accentColor(.white)
+                .preferredColorScheme(.dark)
+                .toolbarBackground(.visible, for: .tabBar)
+                .toolbarBackground(Color.black, for: .tabBar)
+                .onAppear {
+                    configureTabBarAppearance()
+                }
+                .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
+                    PatchUnlockPrompt(store: patchStore)
+                }
+            } else {
+                LicenseActivationView(manager: licenseManager)
+            }
         }
-        .accentColor(.white)
-        .preferredColorScheme(.dark)
-        .toolbarBackground(.visible, for: .tabBar)
-        .toolbarBackground(Color.black, for: .tabBar)
         .onAppear {
-            configureTabBarAppearance()
+            licenseManager.beginLaunchSession()
         }
-        .sheet(item: $patchStore.passwordRequest, onDismiss: patchStore.cancelUnlock) { _ in
-            PatchUnlockPrompt(store: patchStore)
+        .onChange(of: scenePhase) { phase in
+            if phase == .active {
+                licenseManager.refresh()
+            }
         }
     }
 }
@@ -492,6 +507,7 @@ struct FeaturesView: View {
 
 // MARK: - CÀI ĐẶT (SETTINGS VIEW)
 struct SettingsView: View {
+    @ObservedObject var licenseManager: LicenseManager
     @ObservedObject private var audioManager = AudioManager.shared
     
     var body: some View {
@@ -572,10 +588,53 @@ struct SettingsView: View {
                         .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
                         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
                     }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("BẢN QUYỀN / KEY").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        VStack(spacing: 12) {
+                            if let savedKey = licenseManager.rememberedKey(), !savedKey.isEmpty {
+                                HStack {
+                                    Text("Key hiện tại").foregroundStyle(.white)
+                                    Spacer()
+                                    Text(savedKey)
+                                        .font(.system(.footnote, design: .monospaced).bold())
+                                        .foregroundStyle(.white.opacity(0.8))
+                                }
+                            }
+                            if let exp = licenseManager.expirationDate {
+                                HStack {
+                                    Text("Hết hạn").foregroundStyle(.white)
+                                    Spacer()
+                                    Text(exp.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.footnote)
+                                        .foregroundStyle(.white.opacity(0.75))
+                                }
+                            }
+                            Button {
+                                licenseManager.deactivate()
+                            } label: {
+                                HStack {
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                    Text("Đăng xuất key")
+                                }
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundStyle(.red.opacity(0.95))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.red.opacity(0.35), lineWidth: 0.5))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding()
+                        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+                    }
                     
                     Spacer()
                 }
                 .padding(.horizontal, 20)
+                .padding(.bottom, 28)
             }
         }
     }
