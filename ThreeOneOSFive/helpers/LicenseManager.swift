@@ -1,4 +1,5 @@
 import Combine
+import CryptoKit
 import Foundation
 import Security
 import SwiftUI
@@ -26,9 +27,11 @@ struct GeneratedKeyItem: Identifiable, Codable, Equatable {
 @MainActor
 final class LicenseManager: ObservableObject {
     // Key có sẵn hạn 1 ngày (24 giờ)
-    static let defaultPresetKey = "TienDat"
-    // Mật khẩu đăng nhập Admin trong app (đổi theo ý bạn)
-    static let adminPassword = "admin1234"
+    static let defaultPresetKey = "MUY-1DAY"
+    // Mật khẩu đăng nhập Admin (đổi theo ý bạn)
+    static let adminPassword = "muyadmin123"
+    // Khóa bí mật HMAC-SHA256 (phải khớp với file Python sinh 1000 key)
+    static let hmacSecret = "MUY_NGUYEN_MINH_HUY_HMAC_SECRET_2026"
 
     @Published private(set) var expirationDate: Date?
     @Published private(set) var isActive = false
@@ -38,12 +41,12 @@ final class LicenseManager: ObservableObject {
     @Published var rememberKey = true
     @Published private(set) var generatedKeys: [GeneratedKeyItem] = []
 
-    private let service = "com.tiendat.develop.activation"
+    private let service = "com.muy.nguyenminhhuy.activation"
     private let keyAccount = "license-key"
     private let expiresAccount = "license-expires-at"
     private let adminAccount = "license-is-admin"
     private let keysVaultAccount = "license-generated-vault"
-    private let usedKeysDefaultsKey = "muyy_used_one_time_keys_v1"
+    private let usedKeysDefaultsKey = "muy_used_keys_v1"
 
     private var expiryTimer: Timer?
 
@@ -57,16 +60,16 @@ final class LicenseManager: ObservableObject {
         expiryTimer?.invalidate()
     }
 
-    // MARK: - Session & Auto Check Hết Hạn
+    // MARK: - Session & Kiểm tra hết hạn tự động
 
     func beginLaunchSession() {
         restoreSavedSession()
         if isAdmin {
-            message = "Admin mode active"
+            message = "Nguyen Minh Huy • Admin mode active"
         } else if isActive {
-            message = "Ready to use"
+            message = "Muy System ready"
         } else {
-            message = "Key required -- enter your 1-day key"
+            message = "Yêu cầu key • Nhập key 1 ngày để tiếp tục"
         }
     }
 
@@ -86,7 +89,7 @@ final class LicenseManager: ObservableObject {
     private func checkExpirationNow() {
         guard !isAdmin, isActive, let exp = expirationDate else { return }
         if Date() > exp {
-            deactivate(reason: "Key đã hết hạn 1 ngày. Vui lòng nhập key mới.")
+            deactivate(reason: "Key 1 ngày đã hết hạn. Vui lòng nhập key mới.")
         }
     }
 
@@ -108,7 +111,6 @@ final class LicenseManager: ObservableObject {
         if let expStr = string(for: expiresAccount), let expInterval = Double(expStr) {
             let expDate = Date(timeIntervalSince1970: expInterval)
             if Date() > expDate {
-                // Hết hạn 1 ngày -> tự đăng xuất key
                 delete(keyAccount)
                 delete(expiresAccount)
                 expirationDate = nil
@@ -124,20 +126,42 @@ final class LicenseManager: ObservableObject {
         }
     }
 
-    // MARK: - Kích hoạt Key (Key có sẵn 1 ngày hoặc Key AutoGen)
+    // MARK: - Xác thực chữ ký HMAC-SHA256 cho danh sách key hàng loạt (MUY-XXXXXXXX-YYYYYY)
+
+    static func isValidSignedKey(_ rawKey: String) -> Bool {
+        let normalized = rawKey.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let parts = normalized.split(separator: "-")
+        guard parts.count == 3,
+              parts[0] == "MUY",
+              parts[1].count == 8,
+              parts[2].count == 6 else {
+            return false
+        }
+
+        let base = "\(parts[0])-\(parts[1])"
+        let givenSig = String(parts[2])
+
+        let keyData = SymmetricKey(data: Data(hmacSecret.utf8))
+        let authCode = HMAC<SHA256>.authenticationCode(for: Data(base.utf8), using: keyData)
+        let expectedSig = authCode.map { String(format: "%02X", $0) }.joined().prefix(6)
+
+        return givenSig == expectedSig
+    }
+
+    // MARK: - Kích hoạt Key
 
     func activate(key: String) {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isBusy else { return }
 
         isBusy = true
-        message = "Đang kiểm tra key..."
+        message = "Đang xác thực key..."
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
             guard let self else { return }
             self.isBusy = false
 
-            // 1. Kiểm tra nếu là key trong kho AutoGen của Admin
+            // 1. Key trong kho AutoGen của Admin
             if let idx = self.generatedKeys.firstIndex(where: { $0.code.caseInsensitiveCompare(trimmed) == .orderedSame }) {
                 var item = self.generatedKeys[idx]
 
@@ -165,17 +189,32 @@ final class LicenseManager: ObservableObject {
                 return
             }
 
-            // 2. Kiểm tra key có sẵn hạn 1 ngày (ví dụ "TienDat")
+            // 2. Key có sẵn hạn 1 ngày (24 giờ)
             if trimmed.caseInsensitiveCompare(Self.defaultPresetKey) == .orderedSame {
                 let normalized = trimmed.lowercased()
                 if self.isKeyAlreadyConsumed(normalized) {
                     self.isActive = false
-                    self.message = "Key mặc định 1 ngày đã được sử dụng trên thiết bị này."
+                    self.message = "Key mặc định 1 ngày đã được dùng trên thiết bị này."
                     return
                 }
                 self.markKeyConsumed(normalized)
-                let expDate = Date().addingTimeInterval(24 * 3600) // Hạn đúng 1 ngày (24h)
+                let expDate = Date().addingTimeInterval(24 * 3600)
                 self.completeActivation(key: Self.defaultPresetKey, expiresAt: expDate)
+                return
+            }
+
+            // 3. Key random ký HMAC-SHA256 (hạn 1 ngày kể từ lần kích hoạt đầu)
+            let upper = trimmed.uppercased()
+            if Self.isValidSignedKey(upper) {
+                let normalized = upper.lowercased()
+                if self.isKeyAlreadyConsumed(normalized) {
+                    self.isActive = false
+                    self.message = "Key này đã được kích hoạt trước đó."
+                    return
+                }
+                self.markKeyConsumed(normalized)
+                let expDate = Date().addingTimeInterval(24 * 3600)
+                self.completeActivation(key: upper, expiresAt: expDate)
                 return
             }
 
@@ -195,7 +234,6 @@ final class LicenseManager: ObservableObject {
             if let exp = expiresAt {
                 save(String(exp.timeIntervalSince1970), for: expiresAccount)
             } else {
-                // Vĩnh viễn
                 save(String(Date.distantFuture.timeIntervalSince1970), for: expiresAccount)
             }
         } else {
@@ -204,17 +242,23 @@ final class LicenseManager: ObservableObject {
         }
 
         if let exp = expiresAt {
-            message = "Kích hoạt thành công (Hết hạn: \(exp.formatted(date: .abbreviated, time: .shortened)))"
+            message = "Kích hoạt thành công • Hết hạn: \(exp.formatted(date: .abbreviated, time: .shortened))"
         } else {
-            message = "Kích hoạt thành công (Vĩnh viễn)"
+            message = "Kích hoạt thành công • Vĩnh viễn"
         }
     }
 
-    // MARK: - AutoGen Key (Tạo key 1 ngày tự động)
+    // MARK: - AutoGen Key
 
     @discardableResult
     func autoGenerateKey(durationHours: Int = 24) -> GeneratedKeyItem {
-        let code = "MUYY-\(Self.randomHex(length: 8))"
+        let randPart = Self.randomHex(length: 8)
+        let base = "MUY-\(randPart)"
+        let keyData = SymmetricKey(data: Data(Self.hmacSecret.utf8))
+        let authCode = HMAC<SHA256>.authenticationCode(for: Data(base.utf8), using: keyData)
+        let sig = authCode.map { String(format: "%02X", $0) }.joined().prefix(6)
+        let code = "\(base)-\(sig)"
+
         let item = GeneratedKeyItem(
             id: UUID(),
             code: code,
@@ -237,20 +281,20 @@ final class LicenseManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: usedKeysDefaultsKey)
     }
 
-    // MARK: - Admin Login & Bypass
+    // MARK: - Admin Login & Logout
 
     @discardableResult
     func loginAdmin(password: String) -> Bool {
         let trimmed = password.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed == Self.adminPassword else {
-            message = "Sai mật khẩu Admin."
+            message = "Sai mật khẩu Admin của Nguyen Minh Huy."
             return false
         }
         isAdmin = true
         isActive = true
         expirationDate = nil
         save("1", for: adminAccount)
-        message = "Đã đăng nhập quyền Admin"
+        message = "Đã đăng nhập Admin • Nguyen Minh Huy"
         return true
     }
 
@@ -274,11 +318,11 @@ final class LicenseManager: ObservableObject {
     }
 
     func rememberedKey() -> String? {
-        if isAdmin { return "ADMIN-SESSION" }
+        if isAdmin { return "MUY-ADMIN (Nguyen Minh Huy)" }
         return string(for: keyAccount)
     }
 
-    // MARK: - Storage Helpers
+    // MARK: - Lưu trữ
 
     private func isKeyAlreadyConsumed(_ normalizedKey: String) -> Bool {
         let list = UserDefaults.standard.stringArray(forKey: usedKeysDefaultsKey) ?? []
